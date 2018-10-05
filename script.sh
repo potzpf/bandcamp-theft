@@ -11,7 +11,7 @@
 
 #download album page from bandcamp
 echo Download information from $1
-wget -O album-page $1
+wget -c -O album-page $1
 
 echo Extract album data
 #extract album album data
@@ -28,6 +28,7 @@ grep -Pzo "(?<=var TralbumData = ){[\s\S]*?}(?=;)" album-page > extract0
 # 1. Insert double quotes around first-level names
 # 2. Concatenate strings seperated by PLUS (+)
 # 3. Remove comments
+# 4. Remove trailing null-byte
 
 # 1. Insert double quotes
 sed -E "s/^(\s*)(\w*):/\1\"\2\":/" extract0 > extract1
@@ -38,6 +39,11 @@ sed "s/\" + \"//" extract1 > extract2
 # 3. Remove comments
 sed "s/ \/\/.*$//" extract2 > extract3
 
+#4. Remove null-byte
+echo `cat extract3` > album-data
+
+echo steal
+./steal.py < album-data
+
 echo cleanup
-mv extract3 album-data
-rm extract* album-page
+rm extract* album-*

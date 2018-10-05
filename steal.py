@@ -1,36 +1,75 @@
 #!/usr/bin/env python3
 
 import json
+import urllib.request
+import os
+import sys
+from pathlib import Path
 
-def printAlbum(album):
-    print('--- Album Data ---')
-    print(f"Artist:  {album['artist']}")
-    print(f"Title:   {album['title']}")
-    print(f"Date:    {album['date']}")
-    print()
-
-    print('--- Track Data ---')
-    for track in album['tracks']:
-        print(f"No. {track['number']:2} - {track['title']}")
-        print(f"Duration: {track['duration']}")
-        print()
-
-with open('album-data') as fp:
-    data = json.load(fp)
-
-album = {
-    'artist': data['artist'],
-    'title':  data['current']['title'],
-    'date':   data['album_release_date'],
-    'tracks': []
-    }
-
-for track in data['trackinfo']:
-    album['tracks'].append({
-        'title':    track['title'],
-        'number':   track['track_num'],
-        'duration': track['duration'],
-        'url':      track['file']['mp3-128']
+class Album:
+    def __init__(self, artist, date, title):
+        self.data = {
+            'artist': artist,
+            'date':   date,
+            'title':  title,
+            'tracks': []
+        }
+        
+    def addTrack(self, number, title, duration, url):
+        self.data['tracks'].append({
+            'number':   number,
+            'title':    title,
+            'duration': duration,
+            'url':      url
         })
 
-printAlbum(album)
+    """download the album to the folder specified"""
+    def download(self, folder):
+        dir = Path(folder)
+        if not dir.exists():
+            os.makedirs(dir)
+        if dir.exists() and not dir.is_dir():
+            raise
+        
+        for track in self.data['tracks']:
+            if track['number'] == None:
+                fname = f"{track['title']}.mp3"
+            else:
+                fname = f"{track['number']:02} {track['title']}.mp3"
+                
+            path = os.path.join(folder, fname)
+            print(fname)
+            
+            try:
+                urllib.request.urlretrieve(track['url'], path)
+            except Exception as e:
+                print(f"error downloading {fname}: {e}")
+
+            
+        
+
+    def __str__(self):
+        str  = f"Artist : {self.data['artist']}\n"
+        str += f"Title  : {self.data['title']}\n"
+        str += f"Date   : {self.data['date']}\n"
+        str += f"Tracks : {len(self.data['tracks'])}"
+        
+        return str
+
+def main():
+    data = json.load(sys.stdin)
+
+    album = Album(data['artist'],
+                  data['current']['publish_date'],
+                  data['current']['title'])
+
+    for track in data['trackinfo']:
+        album.addTrack(track['track_num'],
+                       track['title'],
+                       track['duration'],
+                       track['file']['mp3-128'])
+
+    print(album)
+    album.download("dl/")
+
+if __name__ == '__main__': main()
