@@ -10,12 +10,9 @@
 
 
 #download album page from bandcamp
-echo Download information from $1
-wget -c -O album-page $1
-
-echo Extract album data
-#extract album album data
-grep -Pzo "(?<=var TralbumData = ){[\s\S]*?}(?=;)" album-page > extract0
+wget -O - $1 |
+# extract data structure
+    grep -Pzo "(?<=var TralbumData = ){[\s\S]*?}(?=;)" |
 
 
 # Re-format to JSON
@@ -31,19 +28,18 @@ grep -Pzo "(?<=var TralbumData = ){[\s\S]*?}(?=;)" album-page > extract0
 # 4. Remove trailing null-byte
 
 # 1. Insert double quotes
-sed -E "s/^(\s*)(\w*):/\1\"\2\":/" extract0 > extract1
+    sed -E "s/^(\s*)(\w*):/\1\"\2\":/" |
+
 
 # 2. Concatenate strings
-sed "s/\" + \"//" extract1 > extract2
+    sed "s/\" + \"//" |
 
 # 3. Remove comments
-sed "s/ \/\/.*$//" extract2 > extract3
+    sed "s/ \/\/.*$//" |
 
 #4. Remove null-byte
-echo `cat extract3` > album-data
+    xargs -0 |
 
-echo steal
-./steal.py < album-data
+#finally: steal some music!    
+    ./steal.py
 
-echo cleanup
-rm extract* album-*
