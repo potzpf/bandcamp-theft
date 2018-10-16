@@ -61,25 +61,28 @@ class Tralbum:
     def addTrack(self, track):
         self.data['tracks'].append(track)
 
-    """copy the album to the path specified"""
-    def copy (self, path, verbose = False):
-        path = os.path.expanduser(path)
-        dir = Path(path)
+    """copy the album to the directory specified"""
+    def copy (self, directory, verbose = False):
+        # expanding path to directory
+        directory = os.path.expanduser(directory)
+        directory = os.path.join(directory, f"{self.data['artist']}/{self.data['year']} {self.data['title']}")
+
+        dir = Path(directory)
         if not dir.exists():
-            if verbose: print(f"creating folder {folder}")
+            if verbose: print(f"creating directory {directory}")
             os.makedirs(dir)
         if dir.exists() and not dir.is_dir():
             if verbose: print(f"{folder} is not a directory")
             raise
         
         for track in self.data['tracks']:
-            track.copy(path, verbose)
+            track.copy(directory, verbose)
 
 
     @staticmethod
     def load(fp):
         data = json.load(fp)
-        year = re.search("\d{4}", data['current']['publish_date'])
+        year = re.search("\d{4}", data['current']['publish_date']).group()
         album = Tralbum(data['artist'],
                         year,
                         data['current']['title'])
