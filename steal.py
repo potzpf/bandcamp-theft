@@ -4,18 +4,24 @@ import json
 import urllib.request
 import os
 import sys
+import re
 from pathlib import Path
+from mp3_tagger import MP3File
 
 class Track:
-    def __init__(self, url, title, number):
+    def __init__(self, url, title, number, album = None):
         self.data = {
             'url': url,
             'title': title,
             'number' : number
         }
 
-    def copy(self, path, verbose):
+        if album:
+            album.addTrack(self)
+            self.album = album
 
+
+    def copy(self, path, verbose):
         if  self.data['number'] == None:
             name = f"{self.data['title']}.mp3"
         else:
@@ -26,20 +32,28 @@ class Track:
 
         try:
             urllib.request.urlretrieve(self.data['url'], path)
+            self.writeTags(path)
         except Exception as e:
             print(f"error downloading {name}: {e}")
 
-    @staticmethod
-    def inAlbum(album, url, title, number):
-        track = Track(url, title, number)
-        album.addTrack(track)
+    def writeTags(self, path):
+        mp3 = MP3File(path)
+        mp3.song  = self.data['title']
+        mp3.track = self.data['number']
+
+        if self.album:
+            mp3.artist = self.album.data['artist']
+            mp3.album  = self.album.data['title']
+            mp3.year   = self.album.data['year']
+
+        mp3.save()
 
 
 class Tralbum:
-    def __init__(self, artist, date, title):
+    def __init__(self, artist, year, title):
         self.data = {
             'artist': artist,
-            'date':   date,
+            'year':   year,
             'title':  title,
             'tracks': []
         }
@@ -65,23 +79,23 @@ class Tralbum:
     @staticmethod
     def load(fp):
         data = json.load(fp)
-
+        year = re.search("\d{4}", data['current']['publish_date'])
         album = Tralbum(data['artist'],
-                        data['current']['publish_date'],
+                        year,
                         data['current']['title'])
 
         for track in data['trackinfo']:
-            Track.inAlbum(album,
-                          track['file']['mp3-128'],
-                          track['title'],
-                          track['track_num'])
+            Track(track['file']['mp3-128'],
+                  track['title'],
+                  track['track_num'],
+                  album)
 
         return album
 
     def __str__(self):
         str  = f"Artist : {self.data['artist']}\n"
         str += f"Title  : {self.data['title']}\n"
-        str += f"Date   : {self.data['date']}\n"
+        str += f"Year   : {self.data['year']}\n"
         str += f"Tracks : {len(self.data['tracks'])}"
         
         return str
