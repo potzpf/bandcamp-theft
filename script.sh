@@ -42,4 +42,3 @@ wget -O - $1 |
 
 #finally: steal some music!    
     ./steal.py
-
